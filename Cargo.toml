@@ -1,5 +1,5 @@
 [package]
-name = "secret-axelar"
+name = "secret-axelar-gmp"
 version = "0.1.0"
 authors = ["seanrad"]
 edition = "2021"
