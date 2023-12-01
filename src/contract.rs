@@ -51,7 +51,7 @@ pub fn execute(
             source_chain,
             source_address,
             payload,
-        } => receive_message_evm(deps, source_chain, source_address, payload),
+        } => receive_message_evm(deps, env, info, source_chain, source_address, payload),
     }
 }
 
@@ -110,6 +110,8 @@ pub fn send_message_evm(
 
 pub fn receive_message_evm(
     deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
     _source_chain: String,
     _source_address: String,
     payload: Binary,
@@ -130,8 +132,54 @@ pub fn receive_message_evm(
             message: decoded[1].to_string(),
         },
     )?;
+    let message = decoded[1].to_string().clone();
 
-    Ok(Response::new())
+    // Message payload to be received by the destination
+    let message_payload = encode(&vec![
+        Token::String(info.sender.to_string()),
+        Token::String(message),
+    ]);
+
+    let coin = &info.funds[0];
+
+    let my_coin = crate::ibc::Coin {
+        denom: coin.denom.clone(),
+        amount: coin.amount.clone().to_string(),
+    };
+
+    let destination_chain = "Polygon".to_string();
+    let destination_address = "0xe31d9a784d53729E166C28FdF45DE421c8FCdBe8".to_string();
+
+    let gmp_message: GmpMessage = GmpMessage {
+        destination_chain,
+        destination_address,
+        payload: message_payload.to_vec(),
+        type_: 1,
+        fee: Some(Fee {
+            amount: coin.amount.clone().to_string(), // Make sure to handle amounts accurately
+            recipient: "axelar1aythygn6z5thymj6tmzfwekzh05ewg3l7d6y89".to_string(),
+        }),
+    };
+
+    let memo = to_string(&gmp_message).unwrap();
+
+    let ibc_message = crate::ibc::MsgTransfer {
+        source_port: "transfer".to_string(),
+        source_channel: "channel-3".to_string(), // Testnet Osmosis to axelarnet: https://docs.axelar.dev/resources/testnet#ibc-channels
+        token: Some(my_coin.into()),
+        sender: env.contract.address.to_string(),
+        receiver: "axelar1dv4u5k73pzqrxlzujxg3qp8kvc3pje7jtdvu72npnt5zhq05ejcsn5qme5".to_string(),
+        timeout_height: None,
+        timeout_timestamp: env.block.time.plus_seconds(604_800u64).nanos(),
+        memo: memo,
+    };
+
+    let cosmos_msg = cosmwasm_std::CosmosMsg::Stargate {
+        type_url: "/ibc.applications.transfer.v1.MsgTransfer".to_string(),
+        value: Binary(ibc_message.encode_to_vec()),
+    };
+
+    Ok(Response::new().add_message(cosmos_msg))
 }
 
 #[entry_point]

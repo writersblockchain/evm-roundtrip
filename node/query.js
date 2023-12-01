@@ -11,9 +11,10 @@ const secretjs = new SecretNetworkClient({
   walletAddress: wallet.address,
 });
 
+// secret contract info
 let contractCodeHash =
-  "90cc33f5f8313e8c584516d1196ff8b52520a86926cf6967e8361c717e91d5c2";
-let contractAddress = "secret1qdkf9630dmpekkmww873e5tec3jxs0klqzg9fr";
+  "b8c8ef5d5783c277af5dad929a1f04e1fd4bfbc9194f35ccbf0e524056b8511c";
+let contractAddress = "secret1ftukxfm978r56c6lz9l7jwslulhmurx9sakx7a";
 
 // Query the contract for the stored message sent from Polygon
 let get_stored_message = async () => {
